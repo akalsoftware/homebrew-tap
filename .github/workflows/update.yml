@@ -1,7 +1,9 @@
 name: Update formulae
 
-# Follows each tool's releases: daily, or on demand. SupaForge's comes from
-# npm's `latest` tag.
+# Follows each tool's releases: daily, or on demand. SupaForge's newest
+# stable version on npm that is at least a day old — Homebrew refuses npm
+# packages younger than that (std_npm_args sets --min-release-age), and a
+# release's own dependencies are older than the release.
 on:
   schedule:
     - cron: '30 5 * * *'
@@ -27,7 +29,16 @@ jobs:
         env:
           WANTED: ${{ inputs.supaforge }}
         run: |
-          version="${WANTED:-$(npm view @akal/supaforge dist-tags.latest)}"
+          if [ -n "$WANTED" ]; then
+            version="$WANTED"
+          else
+            version="$(npm view @akal/supaforge time --json | node -e '
+              const t = JSON.parse(require("fs").readFileSync(0, "utf8"));
+              const dayAgo = Date.now() - 24 * 3600 * 1000;
+              const ok = Object.entries(t).filter(([v, at]) => /^\d+\.\d+\.\d+$/.test(v) && Date.parse(at) < dayAgo);
+              ok.sort((a, b) => Date.parse(a[1]) - Date.parse(b[1]));
+              console.log(ok.at(-1)[0]);')"
+          fi
           current="$(sed -n 's|.*/supaforge-\(.*\)\.tgz"$|\1|p' Formula/supaforge.rb)"
           echo "current $current, wanted $version"
           if [ "$version" != "$current" ]; then
