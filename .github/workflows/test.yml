@@ -1,0 +1,38 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, macos-15-intel, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # A PR tests itself; a push or the updater tests main as it now is.
+          ref: ${{ github.event.pull_request.head.sha || 'main' }}
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+
+      - name: Install from this tap and test
+        run: |
+          brew tap-new --no-git local/test >/dev/null
+          cp Formula/*.rb "$(brew --repository local/test)/Formula/"
+          for f in Formula/*.rb; do
+            name="$(basename "$f" .rb)"
+            brew install "local/test/$name"
+            brew test "local/test/$name"
+          done
+          supaforge --version

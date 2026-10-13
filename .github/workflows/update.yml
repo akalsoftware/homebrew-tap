@@ -1,0 +1,51 @@
+name: Update formulae
+
+# Follows each tool's releases: daily, or on demand. SupaForge's comes from
+# npm's `latest` tag.
+on:
+  schedule:
+    - cron: '30 5 * * *'
+  workflow_dispatch:
+    inputs:
+      supaforge:
+        description: '@akal/supaforge version (empty: npm latest)'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SupaForge
+        id: supaforge
+        env:
+          WANTED: ${{ inputs.supaforge }}
+        run: |
+          version="${WANTED:-$(npm view @akal/supaforge dist-tags.latest)}"
+          current="$(sed -n 's|.*/supaforge-\(.*\)\.tgz"$|\1|p' Formula/supaforge.rb)"
+          echo "current $current, wanted $version"
+          if [ "$version" != "$current" ]; then
+            scripts/update-formula.sh "$version"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit
+        id: commit
+        if: steps.supaforge.outputs.version != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -am "supaforge ${{ steps.supaforge.outputs.version }}"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: update
+    if: needs.update.outputs.changed == 'true'
+    uses: ./.github/workflows/test.yml
