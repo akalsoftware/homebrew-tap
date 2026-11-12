@@ -2,8 +2,8 @@
 class Supaforge < Formula
   desc "Find and fix drift between Supabase environments"
   homepage "https://supaforge.dev"
-  url "https://registry.npmjs.org/@akal/supaforge/-/supaforge-0.0.41.tgz"
-  sha256 "30df77bbe91fd5198b76498b1791de8467abebadcc6dc0ba10ad7e5dfeefab98"
+  url "https://registry.npmjs.org/@akal/supaforge/-/supaforge-0.0.42.tgz"
+  sha256 "0925f91d2e40fad0aec1ed6babbc225e83d69cae2d23a7215df3fccf04da9482"
   license "MIT"
 
   depends_on "node"
